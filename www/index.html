@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Game Pesawat Sederhana</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; background: #050510; margin: 0 auto; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="ui">Skor: <span id="score">0</span></div>
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreElement = document.getElementById("score");
+
+    // Sesuaikan ukuran canvas dengan layar
+    canvas.width = window.innerWidth > 500 ? 400 : window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let score = 0;
+    let gameActive = true;
+
+    // Objek Pesawat Pemain
+    const player = {
+        x: canvas.width / 2 - 20,
+        y: canvas.height - 80,
+        w: 40,
+        h: 40,
+        color: "#00ff00",
+        speed: 7
+    };
+
+    const bullets = [];
+    const enemies = [];
+
+    // Kontrol Input (Mouse & Touch)
+    window.addEventListener("mousemove", (e) => {
+        let rect = canvas.getBoundingClientRect();
+        player.x = e.clientX - rect.left - player.w / 2;
+    });
+
+    window.addEventListener("touchmove", (e) => {
+        let rect = canvas.getBoundingClientRect();
+        player.x = e.touches[0].clientX - rect.left - player.w / 2;
+        e.preventDefault();
+    }, {passive: false});
+
+    // Menembak otomatis setiap 300ms
+    setInterval(() => {
+        if(gameActive) {
+            bullets.push({ x: player.x + player.w/2 - 2, y: player.y, w: 4, h: 10, speed: 10 });
+        }
+    }, 300);
+
+    // Munculkan musuh setiap 1 detik
+    setInterval(() => {
+        if(gameActive) {
+            let size = 30 + Math.random() * 20;
+            enemies.push({
+                x: Math.random() * (canvas.width - size),
+                y: -size,
+                w: size,
+                h: size,
+                speed: 2 + Math.random() * 3
+            });
+        }
+    }, 1000);
+
+    function update() {
+        if(!gameActive) return;
+
+        // Gerakkan Peluru
+        bullets.forEach((b, i) => {
+            b.y -= b.speed;
+            if(b.y < 0) bullets.splice(i, 1);
+        });
+
+        // Gerakkan Musuh
+        enemies.forEach((en, i) => {
+            en.y += en.speed;
+            
+            // Cek jika musuh lewat bawah (Game Over)
+            if(en.y > canvas.height) {
+                gameActive = false;
+                alert("Game Over! Skor Anda: " + score);
+                location.reload();
+            }
+
+            // Cek tabrakan peluru dengan musuh
+            bullets.forEach((b, bi) => {
+                if(b.x < en.x + en.w && b.x + b.w > en.x && b.y < en.y + en.h && b.y + b.h > en.y) {
+                    enemies.splice(i, 1);
+                    bullets.splice(bi, 1);
+                    score += 10;
+                    scoreElement.innerText = score;
+                }
+            });
+        });
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Gambar Pesawat (Segitiga)
+        ctx.fillStyle = player.color;
+        ctx.beginPath();
+        ctx.moveTo(player.x + player.w/2, player.y);
+        ctx.lineTo(player.x, player.y + player.h);
+        ctx.lineTo(player.x + player.w, player.y + player.h);
+        ctx.fill();
+
+        // Gambar Peluru
+        ctx.fillStyle = "yellow";
+        bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+
+        // Gambar Musuh (Kotak Merah)
+        ctx.fillStyle = "red";
+        enemies.forEach(en => ctx.fillRect(en.x, en.y, en.w, en.h));
+
+        update();
+        requestAnimationFrame(draw);
+    }
+
+    draw();
+</script>
+</body>
+</html>
